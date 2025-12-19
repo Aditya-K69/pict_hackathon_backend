@@ -2,7 +2,7 @@ import Fastify from 'fastify'
 import cors from '@fastify/cors'
 import fastifyEnv from '@fastify/env'
 import fastifySensible from '@fastify/sensible'
-import { drizzle } from 'drizzle-orm/node-postgres'
+import supaConnection from './plugins/supabase.js'
 
 const fastify = Fastify({
   logger: true
@@ -32,6 +32,7 @@ await fastify.register(fastifyEnv,{
 
 await fastify.register(fastifySensible)
 
+await fastify.register(supaConnection)
 
 const startServer = async()=>{
 try {
@@ -41,27 +42,24 @@ try {
     })
 
 
-
 } catch (error) {
     fastify.log.error(`Error occured while starting the server : ${error}`)
-    
 }
 }
 
-fastify.get("/check",function(req,res){
-    res.send({
-        message:"Check done"
-    })
-})
 
-fastify.get('/checkDBconnect',async function(req,res){
-    const db = drizzle(process.env.DATABASE_URL);
-    const result = await db.execute('select 1')
-    res.send({
-        code:200,
-        message:"success",
-        data:result
-    })
+fastify.get('/testdb',async (req,res) => {
+
+    try {
+        
+        const result = await fastify.dbConnection.execute('select 1 as alive')
+        res.status(201).send({success:true,data:result})
+
+    } catch (error) {
+        fastify.log.error(`Error connecting to Supabase : ${error}`)
+        res.status(500).send({error:`Error occurred while connecting to Supabase`})
+    }
+
 })
 
 startServer()
