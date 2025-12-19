@@ -1,2 +1,3 @@
 system-backend/node_modules
 system-backend/.env
+system-backend/supabase
