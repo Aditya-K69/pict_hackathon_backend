@@ -8,6 +8,7 @@ import fastifyJwt from '@fastify/jwt'
 //these are custom built plugins
 import {supaConnection} from './plugins/supabase.js'
 import userRouter from './routes/userRouter.js'
+import companyRouter from './routes/companyRouter.js'
 
 //actual fastify initialization, pre built plugin registration
 const fastify = Fastify({
@@ -38,6 +39,7 @@ await fastify.register(fastifyJwt,{secret:process.env.JWT_SECRET})
 // custom plugin registration
 await fastify.register(supaConnection)
 await fastify.register(userRouter,{prefix:'/users'})
+await fastify.register(companyRouter,{prefix:'/companies'})
 
 // start server
 const startServer = async()=>{

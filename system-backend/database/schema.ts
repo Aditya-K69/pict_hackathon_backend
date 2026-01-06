@@ -1,5 +1,6 @@
 import { pgTable, serial, text,varchar,timestamp, integer } from "drizzle-orm/pg-core"
 
+
 export const usersTable = pgTable('users_table', {
   id: serial('id').primaryKey(),
 
@@ -31,6 +32,28 @@ export const pinResetTable = pgTable("pin_reset_requests", {
   expires_at: timestamp("expires_at").notNull(),
 
   used_at: timestamp("used_at"),
+
+  created_at: timestamp("created_at").defaultNow().notNull(),
+});
+
+
+export const companyTable = pgTable("company_table",{
+  id: serial('id').primaryKey(),
+  company_name: text('company_name').notNull(),
+  company_email: text('company_email').unique().notNull(),
+  password: text('password').notNull()
+})
+
+export const userCompanyTable = pgTable("user_company", {
+  id: serial("id").primaryKey(),
+
+  user_id: integer("user_id")
+    .references(() => usersTable.id, { onDelete: "cascade" })
+    .notNull(),
+
+  company_id: integer("company_id")
+    .references(() => companyTable.id, { onDelete: "cascade" })
+    .notNull(),
 
   created_at: timestamp("created_at").defaultNow().notNull(),
 });
