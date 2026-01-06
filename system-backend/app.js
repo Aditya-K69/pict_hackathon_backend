@@ -1,11 +1,15 @@
+// prebuilt plugins ahet ithe
 import Fastify from 'fastify'
 import cors from '@fastify/cors'
 import fastifyEnv from '@fastify/env'
 import fastifySensible from '@fastify/sensible'
-import {supaConnection} from './plugins/supabase.js'
 import fastifyJwt from '@fastify/jwt'
+
+//these are custom built plugins
+import {supaConnection} from './plugins/supabase.js'
 import userRouter from './routes/userRouter.js'
 
+//actual fastify initialization, pre built plugin registration
 const fastify = Fastify({
   logger: true
 })
@@ -29,23 +33,24 @@ await fastify.register(fastifyEnv,{
     }
 })
 await fastify.register(fastifySensible)
-await fastify.register(supaConnection)
 await fastify.register(fastifyJwt,{secret:process.env.JWT_SECRET})
+
+// custom plugin registration
+await fastify.register(supaConnection)
 await fastify.register(userRouter,{prefix:'/users'})
 
-
-
-
+// start server
 const startServer = async()=>{
 try {    
     await fastify.listen({
-        port: process.env.PORT
+        port : process.env.PORT
     })
 } catch (error) {
     fastify.log.error(`Error occured while starting the server : ${error}`)
 }
 }
 
+//database testing route
 fastify.get('/testdb',async (req,res) => {
     try {
         
