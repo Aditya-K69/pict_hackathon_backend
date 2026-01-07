@@ -5,16 +5,20 @@ import fastifyEnv from '@fastify/env'
 import fastifySensible from '@fastify/sensible'
 import fastifyJwt from '@fastify/jwt'
 
+
 //these are custom built plugins
 import {supaConnection} from './plugins/supabase.js'
+import {mail_service} from './plugins/nodemailer.js'
 import userRouter from './routes/userRouter.js'
 import companyRouter from './routes/companyRouter.js'
+
 
 //actual fastify initialization, pre built plugin registration
 const fastify = Fastify({
   logger: true
 })
 await fastify.register(cors,{
+    origin:"http://localhost:5173"
 })
 await fastify.register(fastifyEnv,{
     dotenv:true,
@@ -36,8 +40,10 @@ await fastify.register(fastifyEnv,{
 await fastify.register(fastifySensible)
 await fastify.register(fastifyJwt,{secret:process.env.JWT_SECRET})
 
+
 // custom plugin registration
 await fastify.register(supaConnection)
+await fastify.register(mail_service)
 await fastify.register(userRouter,{prefix:'/users'})
 await fastify.register(companyRouter,{prefix:'/companies'})
 

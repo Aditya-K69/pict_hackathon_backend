@@ -1,4 +1,4 @@
-import {registerCompany,loginCompany} from "../controllers/companyController.js"
+import {registerCompany,loginCompany,listCompanies} from "../controllers/companyController.js"
 
 
 export default async function companyRouter(fastify) {
@@ -43,4 +43,6 @@ export default async function companyRouter(fastify) {
                 }
             }       
     },loginCompany)
+
+fastify.get('/getall',listCompanies)
 }

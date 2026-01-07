@@ -1,4 +1,4 @@
-import { registerUser,loginUser,forgotPIN , authOTP, resetPIN} from "../controllers/userController.js";
+import { registerUser,loginUser,forgotPIN , authOTP, resetPIN, mapCompanies, listUsers, listMapping} from "../controllers/userController.js";
 
 export default async function userRouter(fastify) {
     
@@ -134,5 +134,26 @@ fastify.post('/resetPIN',{
     }
   }
 },resetPIN)
+
+fastify.post('/addcompany',{
+  schema:{
+    body:{
+      type:"object",
+      required:["id","company_name"],
+      additionalProperties:false,
+      properties:{
+        id:{
+          type:"string"
+        },
+        company_name:{
+          type:"string"
+        }
+      }
+    }
+  }
+},mapCompanies)
+
+fastify.get('/getall',listUsers)
+fastify.get('/getmappings',listMapping)
 
 }

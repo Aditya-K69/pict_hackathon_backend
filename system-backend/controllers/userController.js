@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs'
-import { usersTable } from '../database/schema.ts'
+import { userCompanyTable, usersTable } from '../database/schema.ts'
 import { pinResetTable } from '../database/schema.ts'
+import { companyTable } from '../database/schema.ts'
 import { eq , and , isNull, desc,gt} from 'drizzle-orm'
 
 
@@ -63,55 +64,61 @@ export async function loginUser(request, reply) {
 
 export async function forgotPIN(request, reply) {
   try {
-    const { email } = request.body;
+    const { email } = request.body
 
-    // Always respond success (prevent user enumeration)
-    const user = await request.server.dbConnection
+    const users = await request.server.dbConnection
       .select()
       .from(usersTable)
       .where(eq(usersTable.email, email))
-      .limit(1);
+      .limit(1)
 
-    if (user.length === 0) {
+    if (users.length === 0) {
       return reply.send({
-        message: "If the account exists, an OTP has been sent",
-      });
+        message: 'If the account exists, an OTP has been sent',
+      })
     }
 
-    const otp = genOTP(); // e.g. "482913"
-    const otpHash = await bcrypt.hash(otp, 10);
+    const user = users[0]
+    const otp = genOTP()
+    const otpHash = await bcrypt.hash(otp, 10)
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000)
 
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
-
-    // Invalidate previous unused OTPs
+    // invalidate old OTPs
     await request.server.dbConnection
       .update(pinResetTable)
       .set({ used_at: new Date() })
       .where(
         and(
-          eq(pinResetTable.user_id, user[0].id),
+          eq(pinResetTable.user_id, user.id),
           isNull(pinResetTable.used_at)
         )
-      );
+      )
 
-    // Insert new OTP
+    // store new OTP
     await request.server.dbConnection.insert(pinResetTable).values({
-      user_id: user[0].id,
+      user_id: user.id,
       token_hash: otpHash,
       expires_at: expiresAt,
-    });
+    })
 
-    // TODO: send OTP via email/SMS
-    console.log("OTP (dev only):", otp);
+    // send email AFTER persistence
+    await request.server.mailer.sendMail({
+      to: email,
+      subject: 'Reset PIN OTP',
+      text: `Your OTP is ${otp}. It expires in 10 minutes.`,
+    })
+
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('OTP (dev only):', otp)
+    }
 
     return reply.send({
-      message: `If the account exists, an OTP has been sent ${otp}`,
-    });
+      message: 'If the account exists, an OTP has been sent',
+    })
   } catch (err) {
     return reply.code(500).send({
-      error: "internal_server_error",
-      message: err
-    });
+      error: 'internal_server_error',
+    })
   }
 }
 
@@ -228,4 +235,67 @@ export async function resetPIN(request, reply) {
     request.log.error(err);
     return reply.code(500).send({ error: "internal_server_error" });
   }
+}
+
+export async function mapCompanies(request,reply) {
+try {
+    const {id,company_name} = request.body
+    const companies = await request.server.dbConnection.select().from(companyTable).where(eq(companyTable.company_name,company_name));
+    const company = companies[0];
+  
+    const user_id = id;
+    const company_id = company.id
+  
+    await request.server.dbConnection.insert(userCompanyTable).values({
+      user_id,
+      company_id
+    })
+  
+    return reply.code(201).send({
+      message:"Mapping done successfully"
+    })
+  
+} catch (error) {
+  return reply.code(500).send({
+    message:"Error occured ",
+    error:error
+  })
+}
+}
+
+
+export async function listUsers(request, reply) {
+  const users = await request.server.dbConnection
+    .select({
+      id: usersTable.id,
+      name: usersTable.name,
+      email: usersTable.email,
+      phone_number: usersTable.phone_number,
+      created_at: usersTable.created_at,
+    })
+    .from(usersTable);
+
+  return reply.code(200).send({ users });
+}
+
+export async function listMapping(request, reply) {
+  const mappings = await request.server.dbConnection
+    .select({
+      mapping_id: userCompanyTable.id,
+
+      user_id: usersTable.id,
+      user_name: usersTable.name,
+      user_email: usersTable.email,
+
+      company_id: companyTable.id,
+      company_name: companyTable.company_name,
+      company_email: companyTable.company_email,
+
+      mapped_at: userCompanyTable.created_at,
+    })
+    .from(userCompanyTable)
+    .innerJoin(usersTable, eq(userCompanyTable.user_id, usersTable.id))
+    .innerJoin(companyTable, eq(userCompanyTable.company_id, companyTable.id));
+
+  return reply.code(200).send({ mappings });
 }

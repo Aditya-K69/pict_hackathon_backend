@@ -58,3 +58,16 @@ export async function loginCompany(request,reply) {
     })
 
 }
+
+export async function listCompanies(request, reply) {
+  const companies = await request.server.dbConnection
+    .select({
+      id: companyTable.id,
+      company_name: companyTable.company_name,
+      company_email: companyTable.company_email,
+      
+    })
+    .from(companyTable);
+
+  return reply.code(200).send({ companies });
+}
