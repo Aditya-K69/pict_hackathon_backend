@@ -2,6 +2,7 @@ import fastifyPlugin from "fastify-plugin";
 import { drizzle } from 'drizzle-orm/postgres-js'
 import postgres from 'postgres'
 
+
 export const supaConnection = fastifyPlugin(async (fastify, options) => {
     try {
         const connString = process.env.DATABASE_URL;
@@ -17,3 +18,4 @@ export const supaConnection = fastifyPlugin(async (fastify, options) => {
 
 
 })
+

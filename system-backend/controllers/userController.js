@@ -3,6 +3,7 @@ import { userCompanyTable, usersTable } from '../database/schema.ts'
 import { pinResetTable } from '../database/schema.ts'
 import { companyTable } from '../database/schema.ts'
 import { eq , and , isNull, desc,gt} from 'drizzle-orm'
+import { userFilesTable } from "../database/schema.ts";
 
 
 const genOTP = ()=>{
@@ -298,4 +299,68 @@ export async function listMapping(request, reply) {
     .innerJoin(companyTable, eq(userCompanyTable.company_id, companyTable.id));
 
   return reply.code(200).send({ mappings });
+}
+
+export async function uploadFile(request, reply) {
+  // 1. Read multipart file
+  const file = await request.file();
+
+  if (!file) {
+    return reply.code(400).send({ error: "no_file_provided" });
+  }
+
+  // 2. Validate
+  const allowedTypes = [
+    "image/jpeg",
+    "image/png",
+    "application/pdf"
+  ];
+
+  if (!allowedTypes.includes(file.mimetype)) {
+    return reply.code(415).send({ error: "unsupported_file_type" });
+  }
+
+  const buffer = await file.toBuffer();
+
+  if (buffer.length > 10 * 1024 * 1024) {
+    return reply.code(413).send({ error: "file_too_large" });
+  }
+
+  // 3. Storage path
+  const storagePath = `users/${request.user.id}/${crypto.randomUUID()}-${file.filename}`;
+
+  // 4. Upload to Supabase Storage
+  const { error: uploadError } = await request.server.supabase.storage
+    .from("user-docs")
+    .upload(storagePath, buffer, {
+      contentType: file.mimetype,
+      upsert: false
+    });
+
+  if (uploadError) {
+    return reply.code(500).send({
+      error: "storage_upload_failed",
+      details: uploadError.message
+    });
+  }
+
+  // 5. Persist metadata with Drizzle
+  const [saved] = await request.server.dbConnection
+    .insert(userFilesTable)
+    .values({
+      user_id: request.user.id,
+      storage_path: storagePath,
+      file_name: file.filename,
+      mime_type: file.mimetype,
+      file_size: buffer.length
+    })
+    .returning();
+
+  // 6. Response
+  return reply.code(201).send({
+    id: saved.id,
+    name: saved.file_name,
+    size: saved.file_size,
+    path: saved.storage_path
+  });
 }

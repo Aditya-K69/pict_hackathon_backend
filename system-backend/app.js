@@ -4,27 +4,30 @@ import cors from '@fastify/cors'
 import fastifyEnv from '@fastify/env'
 import fastifySensible from '@fastify/sensible'
 import fastifyJwt from '@fastify/jwt'
+import fastifyMultipart from '@fastify/multipart'
 
 
 //these are custom built plugins
 import {supaConnection} from './plugins/supabase.js'
 import {mail_service} from './plugins/nodemailer.js'
+import auth from './plugins/auth.js'
 import userRouter from './routes/userRouter.js'
 import companyRouter from './routes/companyRouter.js'
-
+import { supaClient } from './plugins/client.js'
 
 //actual fastify initialization, pre built plugin registration
 const fastify = Fastify({
   logger: true
 })
 await fastify.register(cors,{
-    origin:"http://localhost:5173"
+    origin:"http://localhost:5173",
+    credentials:true
 })
 await fastify.register(fastifyEnv,{
     dotenv:true,
     schema:{
         type: "object",
-        required: ["PORT","DATABASE_URL"],
+        required: ["PORT","DATABASE_URL","JWT_SECRET"],
         properties: {
             PORT: {
                 type:"string",
@@ -38,11 +41,19 @@ await fastify.register(fastifyEnv,{
     }
 })
 await fastify.register(fastifySensible)
+await fastify.register(fastifyMultipart,{
+    limits:{
+        fileSize:49*1024*1024,
+        files:10
+    }
+})
 await fastify.register(fastifyJwt,{secret:process.env.JWT_SECRET})
+await fastify.register(auth)
 
 
 // custom plugin registration
 await fastify.register(supaConnection)
+await fastify.register(supaClient)
 await fastify.register(mail_service)
 await fastify.register(userRouter,{prefix:'/users'})
 await fastify.register(companyRouter,{prefix:'/companies'})
@@ -63,7 +74,7 @@ fastify.get('/testdb',async (req,res) => {
     try {
         
         const result = await fastify.dbConnection.execute('select 1 as alive')
-        res.status(201).send({success:true,data:result})
+        res.status(200).send({success:true,data:result})
 
     } catch (error) {
         fastify.log.error(`Error connecting to Supabase : ${error}`)

@@ -7,8 +7,8 @@ export const mail_service = fastifyPlugin(async(fastify,options)=>{
     host: "smtp.ethereal.email",
     port: 587,
     auth: {
-        user: "eve.haag@ethereal.email",
-        pass: "7GS9eBn5p88ZDzTWPD",
+        user: "elisa.lockman@ethereal.email",
+        pass: "7nJUV9DMA6qAqZUPmk",
     },    
 });
 

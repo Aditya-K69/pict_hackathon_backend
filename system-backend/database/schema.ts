@@ -58,6 +58,22 @@ export const userCompanyTable = pgTable("user_company", {
   created_at: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const userFilesTable = pgTable("user_files", {
+  id: serial("id").primaryKey(),
+
+  user_id: integer("user_id")
+    .references(() => usersTable.id, { onDelete: "cascade" })
+    .notNull(),
+
+  // Supabase Storage path (authoritative)
+  storage_path: varchar("storage_path", { length: 512 }).notNull(),
+
+  file_name: varchar("file_name", { length: 255 }).notNull(),
+  mime_type: varchar("mime_type", { length: 100 }).notNull(),
+  file_size: integer("file_size").notNull(), // bytes
+
+  created_at: timestamp("created_at").defaultNow().notNull(),
+});
 
 export type InsertUser = typeof usersTable.$inferInsert
 export type SelectUser = typeof usersTable.$inferSelect
